@@ -25,6 +25,7 @@ import com.google.stripped.gson.internal.ObjectConstructor;
 import com.google.stripped.gson.reflect.TypeToken;
 import com.google.stripped.gson.stream.JsonReader;
 import com.google.stripped.gson.stream.JsonToken;
+import com.google.stripped.gson.stream.JsonWriter;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
@@ -84,6 +85,19 @@ public final class CollectionTypeAdapterFactory implements TypeAdapterFactory {
       }
       in.endArray();
       return collection;
+    }
+
+    @Override public void write(JsonWriter out, Collection<E> collection) throws IOException {
+      if (collection == null) {
+        out.nullValue();
+        return;
+      }
+
+      out.beginArray();
+      for (E element : collection) {
+        elementTypeAdapter.write(out, element);
+      }
+      out.endArray();
     }
   }
 }

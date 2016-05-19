@@ -23,6 +23,7 @@ import com.google.stripped.gson.internal.LinkedTreeMap;
 import com.google.stripped.gson.reflect.TypeToken;
 import com.google.stripped.gson.stream.JsonReader;
 import com.google.stripped.gson.stream.JsonToken;
+import com.google.stripped.gson.stream.JsonWriter;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -89,5 +90,20 @@ public final class ObjectTypeAdapter extends TypeAdapter<Object> {
     }
   }
 
+  @SuppressWarnings("unchecked")
+  @Override public void write(JsonWriter out, Object value) throws IOException {
+    if (value == null) {
+      out.nullValue();
+      return;
+    }
 
+    TypeAdapter<Object> typeAdapter = (TypeAdapter<Object>) gson.getAdapter(value.getClass());
+    if (typeAdapter instanceof ObjectTypeAdapter) {
+      out.beginObject();
+      out.endObject();
+      return;
+    }
+
+    typeAdapter.write(out, value);
+  }
 }

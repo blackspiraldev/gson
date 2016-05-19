@@ -16,13 +16,10 @@
 
 package com.google.stripped.gson.internal;
 
-import com.google.stripped.gson.JsonElement;
-import com.google.stripped.gson.JsonIOException;
-import com.google.stripped.gson.JsonNull;
-import com.google.stripped.gson.JsonParseException;
-import com.google.stripped.gson.JsonSyntaxException;
+import com.google.stripped.gson.*;
 import com.google.stripped.gson.internal.bind.TypeAdapters;
 import com.google.stripped.gson.stream.JsonReader;
+import com.google.stripped.gson.stream.JsonWriter;
 import com.google.stripped.gson.stream.MalformedJsonException;
 
 import java.io.EOFException;
@@ -63,6 +60,13 @@ public final class Streams {
     } catch (NumberFormatException e) {
       throw new JsonSyntaxException(e);
     }
+  }
+
+  /**
+   * Writes the JSON element to the writer, recursively.
+   */
+  public static void write(JsonElement element, JsonWriter writer) throws IOException {
+    TypeAdapters.JSON_ELEMENT.write(writer, element);
   }
 
   @SuppressWarnings("resource")

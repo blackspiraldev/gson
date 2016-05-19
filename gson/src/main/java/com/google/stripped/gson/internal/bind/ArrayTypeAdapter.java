@@ -16,13 +16,6 @@
 
 package com.google.stripped.gson.internal.bind;
 
-import java.io.IOException;
-import java.lang.reflect.Array;
-import java.lang.reflect.GenericArrayType;
-import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.List;
-
 import com.google.stripped.gson.Gson;
 import com.google.stripped.gson.TypeAdapter;
 import com.google.stripped.gson.TypeAdapterFactory;
@@ -30,6 +23,14 @@ import com.google.stripped.gson.internal.$Gson$Types;
 import com.google.stripped.gson.reflect.TypeToken;
 import com.google.stripped.gson.stream.JsonReader;
 import com.google.stripped.gson.stream.JsonToken;
+import com.google.stripped.gson.stream.JsonWriter;
+
+import java.io.IOException;
+import java.lang.reflect.Array;
+import java.lang.reflect.GenericArrayType;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Adapt an array of objects.
@@ -79,5 +80,18 @@ public final class ArrayTypeAdapter<E> extends TypeAdapter<Object> {
     return array;
   }
 
+  @SuppressWarnings("unchecked")
+  @Override public void write(JsonWriter out, Object array) throws IOException {
+    if (array == null) {
+      out.nullValue();
+      return;
+    }
 
+    out.beginArray();
+    for (int i = 0, length = Array.getLength(array); i < length; i++) {
+      E value = (E) Array.get(array, i);
+      componentTypeAdapter.write(out, value);
+    }
+    out.endArray();
+  }
 }

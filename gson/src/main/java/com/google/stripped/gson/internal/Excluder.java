@@ -16,16 +16,13 @@
 
 package com.google.stripped.gson.internal;
 
-import com.google.stripped.gson.ExclusionStrategy;
-import com.google.stripped.gson.FieldAttributes;
-import com.google.stripped.gson.Gson;
-import com.google.stripped.gson.TypeAdapter;
-import com.google.stripped.gson.TypeAdapterFactory;
+import com.google.stripped.gson.*;
 import com.google.stripped.gson.annotations.Expose;
 import com.google.stripped.gson.annotations.Since;
 import com.google.stripped.gson.annotations.Until;
 import com.google.stripped.gson.reflect.TypeToken;
 import com.google.stripped.gson.stream.JsonReader;
+import com.google.stripped.gson.stream.JsonWriter;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -129,6 +126,13 @@ public final class Excluder implements TypeAdapterFactory, Cloneable {
         return delegate().read(in);
       }
 
+      @Override public void write(JsonWriter out, T value) throws IOException {
+        if (skipSerialize) {
+          out.nullValue();
+          return;
+        }
+        delegate().write(out, value);
+      }
 
       private TypeAdapter<T> delegate() {
         TypeAdapter<T> d = delegate;

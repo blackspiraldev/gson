@@ -16,25 +16,17 @@
 
 package com.google.stripped.gson.internal.bind;
 
-import java.io.IOException;
-import java.util.HashMap;
-
-import java.util.Map;
-
-import com.google.stripped.gson.Gson;
-import com.google.stripped.gson.JsonArray;
-import com.google.stripped.gson.JsonElement;
-import com.google.stripped.gson.JsonNull;
-import com.google.stripped.gson.JsonObject;
-import com.google.stripped.gson.JsonPrimitive;
-import com.google.stripped.gson.JsonSyntaxException;
-import com.google.stripped.gson.TypeAdapter;
-import com.google.stripped.gson.TypeAdapterFactory;
+import com.google.stripped.gson.*;
 import com.google.stripped.gson.annotations.SerializedName;
 import com.google.stripped.gson.internal.LazilyParsedNumber;
 import com.google.stripped.gson.reflect.TypeToken;
 import com.google.stripped.gson.stream.JsonReader;
 import com.google.stripped.gson.stream.JsonToken;
+import com.google.stripped.gson.stream.JsonWriter;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Type adapters for basic types.
@@ -47,6 +39,15 @@ public final class TypeAdapters {
   @SuppressWarnings("rawtypes")
   public static final TypeAdapter<Class> CLASS         = new TypeAdapter<Class>()
   {
+    @Override
+    public void write(JsonWriter out, Class value) throws IOException {
+      if (value == null) {
+        out.nullValue();
+      } else {
+        throw new UnsupportedOperationException("Attempted to serialize java.lang.Class: "
+                + value.getName() + ". Forgot to register a type adapter?");
+      }
+    }
 
     @Override
     public Class read(JsonReader in) throws IOException
@@ -81,6 +82,14 @@ public final class TypeAdapters {
       return in.nextBoolean();
     }
 
+    @Override
+    public void write(JsonWriter out, Boolean value) throws IOException {
+      if (value == null) {
+        out.nullValue();
+        return;
+      }
+      out.value(value);
+    }
   };
 
   /**
@@ -96,7 +105,9 @@ public final class TypeAdapters {
       return Boolean.valueOf(in.nextString());
     }
 
-
+    @Override public void write(JsonWriter out, Boolean value) throws IOException {
+      out.value(value == null ? "null" : value.toString());
+    }
   };
 
   public static final TypeAdapterFactory BOOLEAN_FACTORY
@@ -115,7 +126,10 @@ public final class TypeAdapters {
         throw new JsonSyntaxException(e);
       }
     }
-
+    @Override
+    public void write(JsonWriter out, Number value) throws IOException {
+      out.value(value);
+    }
   };
   public static final TypeAdapterFactory INTEGER_FACTORY
       = newFactory(int.class, Integer.class, INTEGER);
@@ -135,7 +149,10 @@ public final class TypeAdapters {
       }
       return in.nextString();
     }
-
+    @Override
+    public void write(JsonWriter out, String value) throws IOException {
+      out.value(value);
+    }
   };
 
   public static final TypeAdapterFactory STRING_FACTORY = newFactory(String.class, STRING);
@@ -177,7 +194,38 @@ public final class TypeAdapters {
         throw new IllegalArgumentException();
       }
     }
+    @Override public void write(JsonWriter out, JsonElement value) throws IOException {
+      if (value == null || value.isJsonNull()) {
+        out.nullValue();
+      } else if (value.isJsonPrimitive()) {
+        JsonPrimitive primitive = value.getAsJsonPrimitive();
+        if (primitive.isNumber()) {
+          out.value(primitive.getAsNumber());
+        } else if (primitive.isBoolean()) {
+          out.value(primitive.getAsBoolean());
+        } else {
+          out.value(primitive.getAsString());
+        }
 
+      } else if (value.isJsonArray()) {
+        out.beginArray();
+        for (JsonElement e : value.getAsJsonArray()) {
+          write(out, e);
+        }
+        out.endArray();
+
+      } else if (value.isJsonObject()) {
+        out.beginObject();
+        for (Map.Entry<String, JsonElement> e : value.getAsJsonObject().entrySet()) {
+          out.name(e.getKey());
+          write(out, e.getValue());
+        }
+        out.endObject();
+
+      } else {
+        throw new IllegalArgumentException("Couldn't write " + value.getClass());
+      }
+    }
   };
 
   public static final TypeAdapterFactory JSON_ELEMENT_FACTORY
@@ -214,7 +262,9 @@ public final class TypeAdapters {
       }
       return nameToConstant.get(in.nextString());
     }
-
+    @Override public void write(JsonWriter out, T value) throws IOException {
+      out.value(value == null ? null : constantToName.get(value));
+    }
   }
 
   public static final TypeAdapterFactory ENUM_FACTORY = new TypeAdapterFactory() {
@@ -298,6 +348,9 @@ public final class TypeAdapters {
           return null;
         }
         return (TypeAdapter<T2>) new TypeAdapter<T1>() {
+          @Override public void write(JsonWriter out, T1 value) throws IOException {
+            typeAdapter.write(out, value);
+          }
 
           @Override public T1 read(JsonReader in) throws IOException {
             T1 result = typeAdapter.read(in);

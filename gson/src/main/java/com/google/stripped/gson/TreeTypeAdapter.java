@@ -20,6 +20,7 @@ import com.google.stripped.gson.internal.$Gson$Preconditions;
 import com.google.stripped.gson.internal.Streams;
 import com.google.stripped.gson.reflect.TypeToken;
 import com.google.stripped.gson.stream.JsonReader;
+import com.google.stripped.gson.stream.JsonWriter;
 
 import java.io.IOException;
 
@@ -56,6 +57,19 @@ final class TreeTypeAdapter<T> extends TypeAdapter<T> {
       return null;
     }
     return deserializer.deserialize(value, typeToken.getType(), gson.deserializationContext);
+  }
+
+  @Override public void write(JsonWriter out, T value) throws IOException {
+    if (serializer == null) {
+      delegate().write(out, value);
+      return;
+    }
+    if (value == null) {
+      out.nullValue();
+      return;
+    }
+    JsonElement tree = serializer.serialize(value, typeToken.getType(), gson.serializationContext);
+    Streams.write(tree, out);
   }
 
   private TypeAdapter<T> delegate() {

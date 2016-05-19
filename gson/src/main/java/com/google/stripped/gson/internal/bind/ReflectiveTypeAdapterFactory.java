@@ -16,21 +16,14 @@
 
 package com.google.stripped.gson.internal.bind;
 
-import com.google.stripped.gson.FieldNamingStrategy;
-import com.google.stripped.gson.Gson;
-import com.google.stripped.gson.JsonSyntaxException;
-import com.google.stripped.gson.TypeAdapter;
-import com.google.stripped.gson.TypeAdapterFactory;
+import com.google.stripped.gson.*;
 import com.google.stripped.gson.annotations.JsonAdapter;
 import com.google.stripped.gson.annotations.SerializedName;
-import com.google.stripped.gson.internal.$Gson$Types;
-import com.google.stripped.gson.internal.ConstructorConstructor;
-import com.google.stripped.gson.internal.Excluder;
-import com.google.stripped.gson.internal.ObjectConstructor;
-import com.google.stripped.gson.internal.Primitives;
+import com.google.stripped.gson.internal.*;
 import com.google.stripped.gson.reflect.TypeToken;
 import com.google.stripped.gson.stream.JsonReader;
 import com.google.stripped.gson.stream.JsonToken;
+import com.google.stripped.gson.stream.JsonWriter;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -104,7 +97,13 @@ public final class ReflectiveTypeAdapterFactory implements TypeAdapterFactory {
     return new ReflectiveTypeAdapterFactory.BoundField(name, serialize, deserialize) {
       final TypeAdapter<?> typeAdapter = getFieldAdapter(context, field, fieldType);
       @SuppressWarnings({"unchecked", "rawtypes"}) // the type adapter and field type always agree
-
+      @Override void write(JsonWriter writer, Object value)
+          throws IOException, IllegalAccessException {
+        Object fieldValue = field.get(value);
+        TypeAdapter t =
+          new TypeAdapterRuntimeTypeWrapper(context, this.typeAdapter, fieldType.getType());
+        t.write(writer, fieldValue);
+      }
       @Override void read(JsonReader reader, Object value)
           throws IOException, IllegalAccessException {
         Object fieldValue = typeAdapter.read(reader);
@@ -178,7 +177,7 @@ public final class ReflectiveTypeAdapterFactory implements TypeAdapterFactory {
       this.deserialized = deserialized;
     }
     abstract boolean writeField(Object value) throws IOException, IllegalAccessException;
-
+    abstract void write(JsonWriter writer, Object value) throws IOException, IllegalAccessException;
     abstract void read(JsonReader reader, Object value) throws IOException, IllegalAccessException;
   }
 
@@ -219,5 +218,24 @@ public final class ReflectiveTypeAdapterFactory implements TypeAdapterFactory {
       return instance;
     }
 
+    @Override public void write(JsonWriter out, T value) throws IOException {
+      if (value == null) {
+        out.nullValue();
+        return;
+      }
+
+      out.beginObject();
+      try {
+        for (BoundField boundField : boundFields.values()) {
+          if (boundField.writeField(value)) {
+            out.name(boundField.name);
+            boundField.write(out, value);
+          }
+        }
+      } catch (IllegalAccessException e) {
+        throw new AssertionError(e);
+      }
+      out.endObject();
+    }
   }
 }
