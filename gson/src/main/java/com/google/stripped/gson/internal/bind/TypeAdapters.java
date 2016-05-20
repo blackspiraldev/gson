@@ -135,6 +135,25 @@ public final class TypeAdapters {
       = newFactory(int.class, Integer.class, INTEGER);
 
 
+  public static final TypeAdapter<Number> LONG = new TypeAdapter<Number>() {
+    @Override
+    public Number read(JsonReader in) throws IOException {
+      if (in.peek() == JsonToken.NULL) {
+        in.nextNull();
+        return null;
+      }
+      try {
+        return in.nextLong();
+      } catch (NumberFormatException e) {
+        throw new JsonSyntaxException(e);
+      }
+    }
+    @Override
+    public void write(JsonWriter out, Number value) throws IOException {
+      out.value(value);
+    }
+  };
+
   public static final TypeAdapter<String> STRING = new TypeAdapter<String>() {
     @Override
     public String read(JsonReader in) throws IOException {

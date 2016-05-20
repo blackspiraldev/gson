@@ -196,6 +196,8 @@ public final class Gson {
     // type adapters for basic platform types
     factories.add(TypeAdapters.STRING_FACTORY);
     factories.add(TypeAdapters.INTEGER_FACTORY);
+    TypeAdapter<Number> longAdapter = longAdapter(longSerializationPolicy);
+    factories.add(TypeAdapters.newFactory(long.class, Long.class, longAdapter));
     factories.add(TypeAdapters.BOOLEAN_FACTORY);
     factories.add(ArrayTypeAdapter.FACTORY);
     factories.add(TypeAdapters.CLASS_FACTORY);
@@ -208,6 +210,31 @@ public final class Gson {
         constructorConstructor, fieldNamingPolicy, excluder));
 
     this.factories = Collections.unmodifiableList(factories);
+  }
+
+  private static TypeAdapter<Number> longAdapter(LongSerializationPolicy longSerializationPolicy) {
+    if (longSerializationPolicy == LongSerializationPolicy.DEFAULT) {
+      return TypeAdapters.LONG;
+    }
+    return new TypeAdapter<Number>() {
+      @Override
+      public Number read(JsonReader in) throws IOException {
+        if (in.peek() == JsonToken.NULL) {
+          in.nextNull();
+          return null;
+        }
+        return in.nextLong();
+      }
+
+      @Override
+      public void write(JsonWriter out, Number value) throws IOException {
+        if (value == null) {
+          out.nullValue();
+          return;
+        }
+        out.value(value.toString());
+      }
+    };
   }
 
   /**
